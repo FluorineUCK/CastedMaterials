@@ -29,6 +29,11 @@ neoForge {
         }
     }
 
+    unitTest {
+        enable()
+        testedMod = mods.casted_materials
+    }
+
     runs {
         configureEach {
             gameDirectory = project.file('run')
