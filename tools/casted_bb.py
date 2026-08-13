@@ -1,0 +1,7 @@
+from __future__ import annotations
+
+from casted_bb_lib.commands import main
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
