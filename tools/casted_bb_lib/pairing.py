@@ -45,7 +45,7 @@ def validate_model(model: BbModel) -> list[PairedFace]:
     if target_width <= 0 or target_height <= 0:
         raise ValidationError("CM_DEST", "<none>", "<none>", "invalid target resolution")
 
-    occupied: dict[tuple[int, int], ElementFaceKey] = {}
+    occupied: dict[tuple[int, int], tuple[str, int, int, ElementFaceKey]] = {}
     pairs: list[PairedFace] = []
     for element_name in sorted(destination):
         dest_element = destination[element_name]
@@ -74,14 +74,22 @@ def validate_model(model: BbModel) -> list[PairedFace]:
                 dest_face, source_face, destination_uv, source_uv,
                 f"CM_SOURCE[{slot}]", element_name, direction)
 
-            for pixel in _pixels(destination_uv):
-                previous = occupied.get(pixel)
-                if previous is not None:
-                    raise ValidationError(
-                        "CM_DEST", element_name, direction,
-                        f"overlaps destination pixel {pixel[0]},{pixel[1]} written by "
-                        f"{previous.element}/{previous.face}")
-                occupied[pixel] = key
+            dx, dy, dw, dh = _rect(destination_uv)
+            sx, sy, sw, sh = _rect(source_uv)
+            for local_y in range(dh):
+                for local_x in range(dw):
+                    source_local_x, source_local_y = _inverse_transform(
+                        transform, local_x, local_y, sw, sh)
+                    pixel = dx + local_x, dy + local_y
+                    signature = slot, sx + source_local_x, sy + source_local_y
+                    previous = occupied.get(pixel)
+                    if previous is not None and previous[:3] != signature:
+                        previous_key = previous[3]
+                        raise ValidationError(
+                            "CM_DEST", element_name, direction,
+                            f"overlaps destination pixel {pixel[0]},{pixel[1]} written by "
+                            f"{previous_key.element}/{previous_key.face}")
+                    occupied[pixel] = (*signature, key)
             pairs.append(PairedFace(key, slot, destination_uv, source_uv, transform))
     return pairs
 
@@ -158,12 +166,26 @@ def _dimensions(uv: tuple[int, int, int, int]) -> tuple[int, int]:
     return abs(uv[2] - uv[0]), abs(uv[3] - uv[1])
 
 
-def _pixels(uv: tuple[int, int, int, int]):
-    min_u, max_u = sorted((uv[0], uv[2]))
-    min_v, max_v = sorted((uv[1], uv[3]))
-    for y in range(min_v, max_v):
-        for x in range(min_u, max_u):
-            yield x, y
+def _rect(uv: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+    x1, y1, x2, y2 = uv
+    return min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)
+
+
+def _inverse_transform(
+        transform: str, x: int, y: int, source_width: int, source_height: int) -> tuple[int, int]:
+    if transform == "identity":
+        return x, y
+    if transform == "rotate_90":
+        return y, source_height - 1 - x
+    if transform == "rotate_180":
+        return source_width - 1 - x, source_height - 1 - y
+    if transform == "rotate_270":
+        return source_width - 1 - y, x
+    if transform == "mirror_x":
+        return source_width - 1 - x, y
+    if transform == "mirror_y":
+        return x, source_height - 1 - y
+    raise ValueError(f"unknown mapping transform {transform}")
 
 
 def _is_integer(value: Any) -> bool:

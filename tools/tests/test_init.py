@@ -47,3 +47,19 @@ def test_init_is_byte_deterministic(tmp_path: Path) -> None:
         ]) == 0
 
     assert outputs[0].read_bytes() == outputs[1].read_bytes()
+
+
+def test_init_uses_stable_names_when_input_uuids_are_duplicated(tmp_path: Path) -> None:
+    source = json.loads((FIXTURES / "minimal_model.json").read_text(encoding="utf-8"))
+    source["elements"][1]["uuid"] = source["elements"][0]["uuid"]
+    model = tmp_path / "duplicate-uuid.json"
+    model.write_text(json.dumps(source), encoding="utf-8")
+    output = tmp_path / "paired.bbmodel"
+
+    assert main([
+        "init", "--model", str(model), "--target", "test:body",
+        "--size", "64x32", "--slots", "side,end", "--output", str(output),
+    ]) == 0
+    data = json.loads(output.read_text(encoding="utf-8"))
+    destination = next(group for group in data["outliner"] if group["name"] == "CM_DEST")
+    assert len(destination["children"]) == len(set(destination["children"])) == 2
