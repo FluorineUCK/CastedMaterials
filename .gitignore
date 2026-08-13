@@ -1,8 +1,8 @@
 .gradle/
 build/
 run/
+logs/
 .worktrees/
 __pycache__/
 .pytest_cache/
 *.pyc
-
