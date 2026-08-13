@@ -89,6 +89,7 @@ tasks.withType(JavaCompile).configureEach {
 
 test {
     useJUnitPlatform()
+    systemProperty 'castedMaterials.projectDir', projectDir.absolutePath
 }
 
 jar {
