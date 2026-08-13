@@ -1,5 +1,6 @@
 package com.fluorineuck.castedmaterials;
 
+import com.fluorineuck.castedmaterials.registry.CastedDataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -9,6 +10,7 @@ public final class CastedMaterials {
     public static final String MOD_ID = "casted_materials";
 
     public CastedMaterials(IEventBus modBus) {
+        CastedDataComponents.register(modBus);
     }
 
     public static ResourceLocation id(String path) {
