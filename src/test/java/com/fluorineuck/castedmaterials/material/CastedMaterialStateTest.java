@@ -31,6 +31,17 @@ class CastedMaterialStateTest {
     }
 
     @Test
+    void clearIsIdempotent() {
+        CastedMaterialState state = new CastedMaterialState();
+
+        assertEquals(MaterialSetResult.UNCHANGED, state.clear());
+        assertEquals(MaterialSetResult.CHANGED, state.set(id("create:andesite_casing")));
+        assertEquals(MaterialSetResult.CHANGED, state.clear());
+        assertTrue(state.get().isEmpty());
+        assertEquals(MaterialSetResult.UNCHANGED, state.clear());
+    }
+
+    @Test
     void invalidNbtDoesNotReplacePreviouslyValidState() {
         ResourceLocation copper = id("create:copper_casing");
         CastedMaterialState state = new CastedMaterialState();

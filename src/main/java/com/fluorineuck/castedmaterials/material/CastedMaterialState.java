@@ -27,6 +27,14 @@ public final class CastedMaterialState {
         return MaterialSetResult.CHANGED;
     }
 
+    public MaterialSetResult clear() {
+        if (material == null) {
+            return MaterialSetResult.UNCHANGED;
+        }
+        material = null;
+        return MaterialSetResult.CHANGED;
+    }
+
     public void save(CompoundTag tag) {
         Objects.requireNonNull(tag, "tag");
         if (material == null) {

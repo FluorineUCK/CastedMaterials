@@ -40,6 +40,17 @@ class CastedMaterialsApiTest {
     }
 
     @Test
+    void apiClearNotifiesOnlyWhenStateChanges() {
+        FakeHolder holder = new FakeHolder();
+        holder.castedMaterialState().set(id("create:andesite_casing"));
+
+        assertEquals(MaterialSetResult.CHANGED, CastedMaterialsApi.clearMaterial(holder));
+        assertEquals(1, holder.changeCount);
+        assertEquals(MaterialSetResult.UNCHANGED, CastedMaterialsApi.clearMaterial(holder));
+        assertEquals(1, holder.changeCount);
+    }
+
+    @Test
     void storesMaterialOnAnyItemStackThroughTheRegisteredComponent() {
         ResourceLocation copper = id("create:copper_casing");
         ItemStack stack = new ItemStack(Items.STICK);

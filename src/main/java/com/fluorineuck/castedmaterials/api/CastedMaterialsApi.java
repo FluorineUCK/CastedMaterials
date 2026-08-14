@@ -41,6 +41,15 @@ public final class CastedMaterialsApi {
         return result;
     }
 
+    public static MaterialSetResult clearMaterial(CastedMaterialHolder holder) {
+        Objects.requireNonNull(holder, "holder");
+        MaterialSetResult result = holder.castedMaterialState().clear();
+        if (result == MaterialSetResult.CHANGED) {
+            notifyChanged(holder);
+        }
+        return result;
+    }
+
     public static Optional<ResourceLocation> getMaterial(ItemStack stack) {
         return Optional.ofNullable(Objects.requireNonNull(stack, "stack")
                 .get(CastedDataComponents.MATERIAL.get()));
