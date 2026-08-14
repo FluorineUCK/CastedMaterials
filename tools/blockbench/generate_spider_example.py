@@ -20,9 +20,9 @@ class ExampleOutputs:
     preview_png: Path
 
 
-def generate_example(project_root: Path, examples: Path, build: Path) -> ExampleOutputs:
-    spider_png = project_root / "src/test/resources/fixtures/create_biotech/spider_assembly_table/spider.png"
-    andesite_png = project_root / "src/test/resources/fixtures/create/andesite_casing.png"
+def generate_example(tool_root: Path, examples: Path, build: Path) -> ExampleOutputs:
+    spider_png = tool_root / "test-resources/fixtures/create_biotech/spider_assembly_table/spider.png"
+    andesite_png = tool_root / "test-resources/fixtures/create/andesite_casing.png"
     if not spider_png.is_file() or not andesite_png.is_file():
         raise FileNotFoundError("real spider and andesite test fixtures are required")
     examples.mkdir(parents=True, exist_ok=True)
@@ -151,5 +151,10 @@ def _json(data: dict) -> str:
 
 
 if __name__ == "__main__":
-    root = Path(__file__).resolve().parents[2]
-    generate_example(root, root / "examples", root / "build/casted-materials-preview")
+    tool_root = Path(__file__).resolve().parent
+    project_root = tool_root.parents[1]
+    generate_example(
+        tool_root,
+        tool_root / "examples",
+        project_root / "build/casted-materials-preview",
+    )

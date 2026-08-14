@@ -9,14 +9,14 @@ from PIL import Image
 from generate_spider_example import generate_example
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+TOOL_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_generates_self_contained_andesite_spider_blockbench_preview(tmp_path: Path) -> None:
     examples = tmp_path / "examples"
     build = tmp_path / "build"
 
-    outputs = generate_example(PROJECT_ROOT, examples, build)
+    outputs = generate_example(TOOL_ROOT, examples, build)
 
     assert outputs.authoring_model == examples / "spider_body.bbmodel"
     assert outputs.preview_model == examples / "andesite_spider_assembly_table.bbmodel"
@@ -31,14 +31,14 @@ def test_generates_self_contained_andesite_spider_blockbench_preview(tmp_path: P
     image = Image.open(outputs.preview_png).convert("RGBA")
     assert image.size == (64, 32)
     assert sum(pixel[3] != 0 for pixel in image.get_flattened_data()) == 1_344
-    spider_path = PROJECT_ROOT / "src/test/resources/fixtures/create_biotech/spider_assembly_table/spider.png"
+    spider_path = TOOL_ROOT / "test-resources/fixtures/create_biotech/spider_assembly_table/spider.png"
     spider = Image.open(spider_path).convert("RGBA")
     assert spider.size == (64, 32)
     assert hashlib.sha256(spider_path.read_bytes()).hexdigest() == (
         "93d330a24bda6316db42cd6198120f5a540f591305db671a599ca966888a4704")
     assert [pixel[3] != 0 for pixel in image.get_flattened_data()] == [
         pixel[3] != 0 for pixel in spider.get_flattened_data()]
-    andesite_path = PROJECT_ROOT / "src/test/resources/fixtures/create/andesite_casing.png"
+    andesite_path = TOOL_ROOT / "test-resources/fixtures/create/andesite_casing.png"
     andesite = Image.open(andesite_path).convert("RGBA")
     assert andesite.size == (16, 16)
     assert hashlib.sha256(andesite_path.read_bytes()).hexdigest() == (

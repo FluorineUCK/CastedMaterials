@@ -7,7 +7,7 @@ Python 工具只用于开发和资源制作，不会进入 Casted Materials 生�
 在 Blockbench 中打开：
 
 ```text
-examples/andesite_spider_assembly_table.bbmodel
+tools/blockbench/examples/andesite_spider_assembly_table.bbmodel
 ```
 
 该文件包含 11 个蜘蛛 Cube、66 个 Face，以及内嵌的 64×32 安山机壳合成贴图，不依赖外部图片即可显示。`CM_SOURCE[all]` 默认隐藏；需要检查双 UV 时可在 Outliner 中打开它。
@@ -15,13 +15,13 @@ examples/andesite_spider_assembly_table.bbmodel
 重新生成示例：
 
 ```powershell
-python tools/generate_spider_example.py
+python tools/blockbench/generate_spider_example.py
 ```
 
 生成内容：
 
-- `examples/spider_body.bbmodel`：可编辑的 `CM_DEST`/`CM_SOURCE[all]` 双 UV 工程；
-- `examples/andesite_spider_assembly_table.bbmodel`：可直接查看的自包含材质预览；
+- `tools/blockbench/examples/spider_body.bbmodel`：可编辑的 `CM_DEST`/`CM_SOURCE[all]` 双 UV 工程；
+- `tools/blockbench/examples/andesite_spider_assembly_table.bbmodel`：可直接查看的自包含材质预览；
 - `build/casted-materials-preview/spider_body_andesite.json`：压缩目标定义；
 - `build/casted-materials-preview/andesite_spider_blockbench.png`：64×32 合成贴图。
 
@@ -30,13 +30,13 @@ python tools/generate_spider_example.py
 从标准 Blockbench JSON/`.bbmodel` 创建配对工程：
 
 ```powershell
-python tools/casted_bb.py init `
+python tools/blockbench/cli.py init `
   --model model.bbmodel `
   --target example:block_or_item `
   --size 64x32 `
   --slots all `
   --source-grid all=16x16 `
-  --output examples/model_paired.bbmodel
+  --output tools/blockbench/examples/model_paired.bbmodel
 ```
 
 组约定：
@@ -49,13 +49,13 @@ python tools/casted_bb.py init `
 验证工程：
 
 ```powershell
-python tools/casted_bb.py validate examples/model_paired.bbmodel
+python tools/blockbench/cli.py validate tools/blockbench/examples/model_paired.bbmodel
 ```
 
 导出定义、PNG 和可直接打开的 Blockbench 预览：
 
 ```powershell
-python tools/casted_bb.py export examples/model_paired.bbmodel `
+python tools/blockbench/cli.py export tools/blockbench/examples/model_paired.bbmodel `
   --source all=assets/example/textures/block/casing.png `
   --target-json build/casted-materials-preview/model.json `
   --preview build/casted-materials-preview/model.png `
