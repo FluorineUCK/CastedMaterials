@@ -11,11 +11,12 @@ import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 @SuppressWarnings("removal")
 @EventBusSubscriber(modid = CastedMaterials.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public final class CastedClientEvents {
-    private static ClientRuntime defaultRuntime;
+    private static final RuntimeInstallation DEFAULT_RUNTIME_INSTALLATION = new RuntimeInstallation();
 
     private CastedClientEvents() {
     }
@@ -31,17 +32,30 @@ public final class CastedClientEvents {
 
     @SubscribeEvent
     static void clientSetup(FMLClientSetupEvent event) {
-        enqueueRuntimeInstallation(event::enqueueWork, CastedClientEvents::installDefaultRuntime);
+        enqueueDefaultRuntimeInstallation(event::enqueueWork, DEFAULT_RUNTIME_INSTALLATION,
+                DefaultClientRuntime::create, CastedMaterialsClient::install);
     }
 
-    static void enqueueRuntimeInstallation(Consumer<Runnable> enqueueWork, Runnable installation) {
-        Objects.requireNonNull(enqueueWork, "enqueueWork").accept(Objects.requireNonNull(installation, "installation"));
+    static void enqueueDefaultRuntimeInstallation(Consumer<Runnable> enqueueWork, RuntimeInstallation state,
+                                                  Supplier<ClientRuntime> runtimeFactory,
+                                                  Consumer<ClientRuntime> installer) {
+        Objects.requireNonNull(enqueueWork, "enqueueWork").accept(() ->
+                Objects.requireNonNull(state, "state").install(runtimeFactory, installer));
     }
 
-    private static synchronized void installDefaultRuntime() {
-        if (defaultRuntime == null) {
-            defaultRuntime = DefaultClientRuntime.create();
+    static final class RuntimeInstallation {
+        private ClientRuntime runtime;
+        private boolean installed;
+
+        synchronized void install(Supplier<ClientRuntime> runtimeFactory, Consumer<ClientRuntime> installer) {
+            if (installed) {
+                return;
+            }
+            if (runtime == null) {
+                runtime = Objects.requireNonNull(runtimeFactory, "runtimeFactory").get();
+            }
+            Objects.requireNonNull(installer, "installer").accept(runtime);
+            installed = true;
         }
-        CastedMaterialsClient.install(defaultRuntime);
     }
 }
