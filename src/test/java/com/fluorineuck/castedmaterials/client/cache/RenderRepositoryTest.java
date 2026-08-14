@@ -1,6 +1,7 @@
 package com.fluorineuck.castedmaterials.client.cache;
 
 import com.fluorineuck.castedmaterials.client.atlas.AtlasAllocation;
+import com.fluorineuck.castedmaterials.client.atlas.AtlasRegion;
 import com.fluorineuck.castedmaterials.client.failure.RenderFailureCode;
 import com.fluorineuck.castedmaterials.client.failure.RenderableState;
 import com.fluorineuck.castedmaterials.mapping.CompositionResult;
@@ -29,6 +30,7 @@ class RenderRepositoryTest {
         repository.resolve(bad, () -> { throw new IllegalStateException("bad client resource"); });
 
         assertEquals(RenderEntry.State.READY, goodEntry.state());
+        assertEquals(id("dynamic/page_0"), goodEntry.region().texture());
         assertEquals(RenderEntry.State.QUARANTINED, repository.find(bad).orElseThrow().state());
         assertEquals(RenderEntry.State.READY, repository.find(good).orElseThrow().state());
 
@@ -68,7 +70,8 @@ class RenderRepositoryTest {
             var callback = completion;
             completion = null;
             callback.accept(new UploadResult(true,
-                    Optional.of(new AtlasAllocation(0, 0, 1, 1)), Optional.empty()));
+                    Optional.of(new AtlasRegion(id("dynamic/page_0"),
+                            new AtlasAllocation(0, 0, 1, 1), 512, 512)), Optional.empty()));
         }
     }
 }

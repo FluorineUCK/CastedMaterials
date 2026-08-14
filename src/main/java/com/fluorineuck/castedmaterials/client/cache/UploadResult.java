@@ -1,16 +1,16 @@
 package com.fluorineuck.castedmaterials.client.cache;
 
-import com.fluorineuck.castedmaterials.client.atlas.AtlasAllocation;
+import com.fluorineuck.castedmaterials.client.atlas.AtlasRegion;
 import com.fluorineuck.castedmaterials.client.failure.RenderFailureCode;
 
 import java.util.Optional;
 
 public record UploadResult(
         boolean uploaded,
-        Optional<AtlasAllocation> allocation,
+        Optional<AtlasRegion> region,
         Optional<RenderFailureCode> failure) {
     public UploadResult {
-        allocation = allocation == null ? Optional.empty() : allocation;
+        region = region == null ? Optional.empty() : region;
         failure = failure == null ? Optional.empty() : failure;
     }
 }

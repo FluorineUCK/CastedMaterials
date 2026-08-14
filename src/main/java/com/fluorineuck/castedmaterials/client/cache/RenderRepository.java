@@ -69,8 +69,8 @@ public final class RenderRepository {
         if (key.generation() != generation || entries.get(key) != entry) {
             return;
         }
-        if (upload.uploaded() && upload.allocation().isPresent()) {
-            entry.ready(upload.allocation().orElseThrow());
+        if (upload.uploaded() && upload.region().isPresent()) {
+            entry.ready(upload.region().orElseThrow());
         } else {
             entry.failed(upload.failure().orElse(RenderFailureCode.GPU_UPLOAD_FAILED), true);
         }

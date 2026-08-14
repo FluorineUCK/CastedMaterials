@@ -1,13 +1,13 @@
 package com.fluorineuck.castedmaterials.client.cache;
 
-import com.fluorineuck.castedmaterials.client.atlas.AtlasAllocation;
+import com.fluorineuck.castedmaterials.client.atlas.AtlasRegion;
 import com.fluorineuck.castedmaterials.client.failure.RenderFailureCode;
 import com.fluorineuck.castedmaterials.client.failure.RenderableState;
 
 public final class RenderEntry {
     private volatile State state = State.MISSING;
     private volatile RenderableState renderableState = RenderableState.FALLBACK_BASE;
-    private volatile AtlasAllocation allocation;
+    private volatile AtlasRegion region;
     private volatile RenderFailureCode failure;
 
     public State state() {
@@ -18,8 +18,8 @@ public final class RenderEntry {
         return renderableState;
     }
 
-    public AtlasAllocation allocation() {
-        return allocation;
+    public AtlasRegion region() {
+        return region;
     }
 
     public RenderFailureCode failure() {
@@ -35,8 +35,8 @@ public final class RenderEntry {
         state = State.WAITING_UPLOAD;
     }
 
-    void ready(AtlasAllocation allocation) {
-        this.allocation = allocation;
+    void ready(AtlasRegion region) {
+        this.region = region;
         state = State.READY;
     }
 
