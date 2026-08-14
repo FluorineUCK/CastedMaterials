@@ -9,7 +9,7 @@ from PIL import Image
 from generate_spider_example import generate_example
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_generates_self_contained_andesite_spider_blockbench_preview(tmp_path: Path) -> None:

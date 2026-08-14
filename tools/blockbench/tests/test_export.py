@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from casted_bb_lib.commands import main
+from casted_bb.commands import main
 
 
 FIXTURES = Path(__file__).parent / "fixtures"

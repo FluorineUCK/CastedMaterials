@@ -4,7 +4,7 @@ from typing import Mapping
 
 from PIL import Image
 
-from .compress import MappedPixel
+from .compression import MappedPixel
 from .pairing import PairedFace
 
 

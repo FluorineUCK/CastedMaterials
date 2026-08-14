@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from casted_bb_lib.commands import main
+from casted_bb.commands import main
 
 
 UUID_NAMESPACE = uuid.UUID("d79bf190-8954-43d4-99e5-3c17c2d43bb6")
@@ -151,5 +151,5 @@ def _json(data: dict) -> str:
 
 
 if __name__ == "__main__":
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     generate_example(root, root / "examples", root / "build/casted-materials-preview")

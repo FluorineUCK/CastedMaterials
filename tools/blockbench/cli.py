@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from casted_bb_lib.commands import main
+from casted_bb.commands import main
 
 
 if __name__ == "__main__":

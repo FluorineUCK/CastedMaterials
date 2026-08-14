@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from casted_bb_lib.commands import main
-from tools.tests.helpers import group_names, stable_face_pairs
+from casted_bb.commands import main
+from tests.helpers import group_names, stable_face_pairs
 
 
 FIXTURES = Path(__file__).parent / "fixtures"

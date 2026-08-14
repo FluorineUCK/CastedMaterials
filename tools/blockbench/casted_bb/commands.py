@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from .model import BbModel
-from .compress import compress_pixels
+from .compression import compress_pixels
 from .pairing import ValidationError, validate_model
 from .preview import expand_pairs, render_definition, render_pixels
 

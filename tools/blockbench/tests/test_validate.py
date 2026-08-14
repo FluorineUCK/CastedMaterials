@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from casted_bb_lib.commands import main
+from casted_bb.commands import main
 
 
 FIXTURES = Path(__file__).parent / "fixtures"

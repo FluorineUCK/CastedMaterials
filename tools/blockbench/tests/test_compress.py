@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from casted_bb_lib.compress import MappedPixel, compress_pixels
+from casted_bb.compression import MappedPixel, compress_pixels
 
 
 def pixels(x: int, y: int, width: int, height: int, *, slot: str = "all",
