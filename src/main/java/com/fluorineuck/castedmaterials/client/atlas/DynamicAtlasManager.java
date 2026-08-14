@@ -40,7 +40,7 @@ public final class DynamicAtlasManager implements UploadQueue, AutoCloseable {
         this(generation, backend, clock, RenderSystem::assertOnRenderThread);
     }
 
-    DynamicAtlasManager(long generation, TextureBackend backend, LongSupplier clock,
+    public DynamicAtlasManager(long generation, TextureBackend backend, LongSupplier clock,
                                Runnable renderThreadAssertion) {
         this.generation = generation;
         this.backend = Objects.requireNonNull(backend, "backend");
