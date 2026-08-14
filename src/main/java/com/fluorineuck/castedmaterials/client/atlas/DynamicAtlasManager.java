@@ -1,5 +1,6 @@
 package com.fluorineuck.castedmaterials.client.atlas;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.fluorineuck.castedmaterials.client.cache.RenderKey;
 import com.fluorineuck.castedmaterials.client.cache.UploadQueue;
 import com.fluorineuck.castedmaterials.client.cache.UploadResult;
@@ -24,6 +25,7 @@ public final class DynamicAtlasManager implements UploadQueue, AutoCloseable {
 
     private final TextureBackend backend;
     private final LongSupplier clock;
+    private final Runnable renderThreadAssertion;
     private final ConcurrentLinkedQueue<PendingUpload> pendingUploads = new ConcurrentLinkedQueue<>();
     private final List<DynamicAtlasPage> pages = new ArrayList<>();
     private long generation;
@@ -31,13 +33,19 @@ public final class DynamicAtlasManager implements UploadQueue, AutoCloseable {
     private boolean closed;
 
     public DynamicAtlasManager(long generation, TextureBackend backend) {
-        this(generation, backend, System::nanoTime);
+        this(generation, backend, System::nanoTime, RenderSystem::assertOnRenderThread);
     }
 
     public DynamicAtlasManager(long generation, TextureBackend backend, LongSupplier clock) {
+        this(generation, backend, clock, RenderSystem::assertOnRenderThread);
+    }
+
+    DynamicAtlasManager(long generation, TextureBackend backend, LongSupplier clock,
+                               Runnable renderThreadAssertion) {
         this.generation = generation;
         this.backend = Objects.requireNonNull(backend, "backend");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.renderThreadAssertion = Objects.requireNonNull(renderThreadAssertion, "renderThreadAssertion");
     }
 
     @Override
@@ -50,6 +58,7 @@ public final class DynamicAtlasManager implements UploadQueue, AutoCloseable {
     }
 
     public int drain(long budgetNanos) {
+        renderThreadAssertion.run();
         if (budgetNanos < 0) {
             throw new IllegalArgumentException("budgetNanos must not be negative");
         }

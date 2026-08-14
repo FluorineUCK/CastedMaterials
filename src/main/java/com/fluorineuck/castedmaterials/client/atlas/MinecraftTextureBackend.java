@@ -1,6 +1,7 @@
 package com.fluorineuck.castedmaterials.client.atlas;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
@@ -13,6 +14,7 @@ public final class MinecraftTextureBackend implements TextureBackend {
 
     @Override
     public void createPage(ResourceLocation id, int width, int height) {
+        RenderSystem.assertOnRenderThread();
         NativeImage image = new NativeImage(width, height, false);
         image.fillRect(0, 0, width, height, 0);
         DynamicTexture texture = new DynamicTexture(image);
@@ -22,6 +24,7 @@ public final class MinecraftTextureBackend implements TextureBackend {
 
     @Override
     public void upload(ResourceLocation page, AtlasAllocation allocation, int[] abgrPixels) {
+        RenderSystem.assertOnRenderThread();
         DynamicTexture texture = requiredPage(page);
         if (abgrPixels.length != allocation.width() * allocation.height()) {
             throw new IllegalArgumentException("Pixel data does not match the atlas allocation");
@@ -38,6 +41,7 @@ public final class MinecraftTextureBackend implements TextureBackend {
 
     @Override
     public void closePage(ResourceLocation id) {
+        RenderSystem.assertOnRenderThread();
         DynamicTexture texture = pages.remove(id);
         if (texture != null) {
             texture.close();

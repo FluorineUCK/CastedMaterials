@@ -27,7 +27,7 @@ class DynamicAtlasManagerTest {
     @Test
     void packsEightBySixteenSpiderTexturesIntoOnePage() {
         FakeBackend backend = new FakeBackend();
-        DynamicAtlasManager atlas = new DynamicAtlasManager(7, backend, () -> 0L);
+        DynamicAtlasManager atlas = testAtlas(7, backend, () -> 0L);
         List<UploadResult> results = new ArrayList<>();
 
         for (int index = 0; index < 128; index++) {
@@ -43,7 +43,7 @@ class DynamicAtlasManagerTest {
     @Test
     void createsASecondPageWhenTheFirstIsFull() {
         FakeBackend backend = new FakeBackend();
-        DynamicAtlasManager atlas = new DynamicAtlasManager(3, backend, () -> 0L);
+        DynamicAtlasManager atlas = testAtlas(3, backend, () -> 0L);
 
         for (int index = 0; index < 129; index++) {
             atlas.enqueue(key(3, index), image(64, 32), ignored -> { });
@@ -57,7 +57,7 @@ class DynamicAtlasManagerTest {
     @Test
     void refusesTheSeventeenthOneMiBPage() {
         FakeBackend backend = new FakeBackend();
-        DynamicAtlasManager atlas = new DynamicAtlasManager(3, backend, () -> 0L);
+        DynamicAtlasManager atlas = testAtlas(3, backend, () -> 0L);
         List<UploadResult> results = new ArrayList<>();
 
         for (int index = 0; index < 65; index++) {
@@ -75,7 +75,7 @@ class DynamicAtlasManagerTest {
     @Test
     void drainStopsWhenInjectedClockPassesTwoMilliseconds() {
         FakeBackend backend = new FakeBackend();
-        DynamicAtlasManager atlas = new DynamicAtlasManager(5, backend,
+        DynamicAtlasManager atlas = testAtlas(5, backend,
                 new FakeClock(0L, 0L, 2_000_000L));
         atlas.enqueue(key(5, 1), image(1, 1), ignored -> { });
         atlas.enqueue(key(5, 2), image(1, 1), ignored -> { });
@@ -87,7 +87,7 @@ class DynamicAtlasManagerTest {
     @Test
     void staleGenerationUploadCompletesAsFailureWithoutTouchingBackend() {
         FakeBackend backend = new FakeBackend();
-        DynamicAtlasManager atlas = new DynamicAtlasManager(5, backend, () -> 0L);
+        DynamicAtlasManager atlas = testAtlas(5, backend, () -> 0L);
         List<UploadResult> results = new ArrayList<>();
         atlas.enqueue(key(4, 1), image(1, 1), results::add);
 
@@ -101,7 +101,7 @@ class DynamicAtlasManagerTest {
     @Test
     void switchGenerationClosesEveryOldPageExactlyOnce() {
         FakeBackend backend = new FakeBackend();
-        DynamicAtlasManager atlas = new DynamicAtlasManager(5, backend, () -> 0L);
+        DynamicAtlasManager atlas = testAtlas(5, backend, () -> 0L);
         for (int index = 0; index < 5; index++) {
             atlas.enqueue(key(5, index), image(256, 256), ignored -> { });
         }
@@ -117,7 +117,7 @@ class DynamicAtlasManagerTest {
     @Test
     void convertsArgbPixelsToAbgrBeforeUploading() {
         FakeBackend backend = new FakeBackend();
-        DynamicAtlasManager atlas = new DynamicAtlasManager(1, backend, () -> 0L);
+        DynamicAtlasManager atlas = testAtlas(1, backend, () -> 0L);
         atlas.enqueue(key(1, 1), new PixelImage(1, 1, new int[] { 0x12_34_56_78 }), ignored -> { });
 
         atlas.drain(Long.MAX_VALUE);
@@ -125,6 +125,19 @@ class DynamicAtlasManagerTest {
         assertArrayEquals(new int[] { 0x12_78_56_34 }, backend.uploads.get(0).pixels());
     }
 
+    @Test
+    void rejectsDrainOffTheRenderThreadBeforeTouchingBackend() {
+        FakeBackend backend = new FakeBackend();
+        DynamicAtlasManager atlas = new DynamicAtlasManager(1, backend);
+        atlas.enqueue(key(1, 1), image(1, 1), ignored -> { });
+
+        assertThrows(IllegalStateException.class, () -> atlas.drain(Long.MAX_VALUE));
+        assertTrue(backend.created.isEmpty());
+        assertTrue(backend.uploads.isEmpty());
+    }
+    private static DynamicAtlasManager testAtlas(long generation, FakeBackend backend, LongSupplier clock) {
+        return new DynamicAtlasManager(generation, backend, clock, () -> { });
+    }
     private static RenderKey key(long generation, int index) {
         return new RenderKey(generation, id("target_" + index), id("material_" + index));
     }
