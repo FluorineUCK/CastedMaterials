@@ -3,11 +3,23 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from casted_bb.commands import main
 from tests.helpers import group_names, stable_face_pairs
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def test_help_uses_canonical_cli_filename(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        main(["--help"])
+
+    assert exit_info.value.code == 0
+    help_text = capsys.readouterr().out
+    assert "usage: cli.py" in help_text
+    assert "casted_bb.py" not in help_text
 
 
 def test_init_builds_standard_paired_uv_blockbench_project(tmp_path: Path) -> None:

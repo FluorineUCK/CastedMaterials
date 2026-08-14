@@ -40,7 +40,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="casted_bb.py")
+    parser = argparse.ArgumentParser(prog="cli.py")
     commands = parser.add_subparsers(dest="command")
     init = commands.add_parser("init", help="create a paired-UV Blockbench project")
     init.add_argument("--model", required=True, type=Path)
