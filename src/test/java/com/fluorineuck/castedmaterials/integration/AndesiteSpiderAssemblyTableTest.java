@@ -1,17 +1,13 @@
 package com.fluorineuck.castedmaterials.integration;
 
-import com.fluorineuck.castedmaterials.client.failure.RenderableState;
-import com.fluorineuck.castedmaterials.client.render.CastedTextureHandle;
-import com.fluorineuck.castedmaterials.client.render.UvTransform;
-import com.fluorineuck.castedmaterials.definition.MappingTransform;
-import com.fluorineuck.castedmaterials.definition.RegionMapping;
-import com.fluorineuck.castedmaterials.definition.TargetDefinition;
-import com.fluorineuck.castedmaterials.definition.TargetDefinitionParser;
-import com.fluorineuck.castedmaterials.mapping.CompositionResult;
-import com.fluorineuck.castedmaterials.mapping.MappingComposer;
+import com.fluorineuck.castedmaterials.mapping.TargetDefinition.MappingTransform;
+import com.fluorineuck.castedmaterials.mapping.TargetDefinition.RegionMapping;
+import com.fluorineuck.castedmaterials.mapping.TargetDefinition;
+import com.fluorineuck.castedmaterials.mapping.DefinitionParser;
+import com.fluorineuck.castedmaterials.mapping.PixelReference;
+import com.fluorineuck.castedmaterials.mapping.UvMapping;
 import com.fluorineuck.castedmaterials.mapping.PixelImage;
 import com.fluorineuck.castedmaterials.mapping.SourceSlotImage;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.junit.jupiter.api.Test;
 
 import javax.imageio.ImageIO;
@@ -40,7 +36,7 @@ class AndesiteSpiderAssemblyTableTest {
 
     @Test
     void coversEveryUsedSpiderUvPixelWithRealAndesiteCasing() throws IOException {
-        TargetDefinition target = TargetDefinitionParser.parse(
+        TargetDefinition target = DefinitionParser.parseTarget(
                 id("create_biotech:spider_assembly_table/andesite"), readText(TARGET));
         PixelImage andesite = readPng(ANDESITE);
         PixelImage spider = readPng(SPIDER);
@@ -57,42 +53,22 @@ class AndesiteSpiderAssemblyTableTest {
         assertEquals(64, spider.width());
         assertEquals(32, spider.height());
 
-        CompositionResult result = MappingComposer.compose(target,
-                Map.of("all", new SourceSlotImage(andesite, target.sourceGrids().get("all"), false)), null);
+        PixelImage result = PixelReference.render(UvMapping.compile(target), Map.of("all", new SourceSlotImage(andesite, target.sourceGrids().get("all"))), null);
 
-        assertEquals(RenderableState.READY, result.state());
-        assertEquals(64, result.image().width());
-        assertEquals(32, result.image().height());
-        assertExactMask(spider, result.image());
-        assertRegionsUseAndesite(target, andesite, result.image());
-        assertTrue(changedOpaquePixels(spider, result.image()) >= 1_000);
+        assertEquals(64, result.width());
+        assertEquals(32, result.height());
+        assertExactMask(spider, result);
+        assertRegionsUseAndesite(target, andesite, result);
+        assertTrue(changedOpaquePixels(spider, result) >= 1_000);
 
         Path previewDirectory = Path.of(
                 System.getProperty("castedMaterials.projectDir", "."),
                 "build", "casted-materials-preview");
         Files.createDirectories(previewDirectory);
-        writePng(result.image(), previewDirectory.resolve("andesite_spider.png"));
-        PixelImage withEyes = new PixelImage(64, 32, result.image().pixels());
-        withEyes.alphaOver(eyes);
+        writePng(result, previewDirectory.resolve("andesite_spider.png"));
+        PixelImage withEyes = new PixelImage(64, 32, result.pixels());
+        PixelReference.alphaOver(withEyes, eyes);
         writePng(withEyes, previewDirectory.resolve("andesite_spider_with_eyes.png"));
-    }
-
-    @Test
-    void customTextureHandleKeepsTheSpiderModelVertexCount() {
-        int spiderVertexCount = (3 + 8) * 6 * 4;
-        CountingVertexConsumer delegate = new CountingVertexConsumer();
-        CastedTextureHandle handle = new CastedTextureHandle(
-                id("dynamic/andesite_spider"), new UvTransform(0.25f, 0.5f, 0.125f, 0.0625f),
-                RenderableState.READY, 1);
-        VertexConsumer wrapped = handle.wrap(delegate);
-
-        for (int i = 0; i < spiderVertexCount; i++) {
-            wrapped.addVertex(i, 0, 0).setUv(0.5f, 0.5f);
-        }
-
-        assertEquals(264, delegate.vertices);
-        assertEquals(0.3125f, delegate.lastU);
-        assertEquals(0.53125f, delegate.lastV);
     }
 
     private static void assertExactMask(PixelImage expected, PixelImage actual) {
@@ -168,42 +144,4 @@ class AndesiteSpiderAssemblyTableTest {
         return stream;
     }
 
-    private static final class CountingVertexConsumer implements VertexConsumer {
-        private int vertices;
-        private float lastU;
-        private float lastV;
-
-        @Override
-        public VertexConsumer addVertex(float x, float y, float z) {
-            vertices++;
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setColor(int red, int green, int blue, int alpha) {
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv(float u, float v) {
-            lastU = u;
-            lastV = v;
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv1(int u, int v) {
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv2(int u, int v) {
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setNormal(float x, float y, float z) {
-            return this;
-        }
-    }
 }

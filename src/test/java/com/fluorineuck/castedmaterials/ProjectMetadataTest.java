@@ -9,9 +9,10 @@ class ProjectMetadataTest {
     @Test
     void exposesStableModIdentityAndCasingTags() {
         assertEquals("casted_materials", CastedMaterials.MOD_ID);
+        assertEquals("casted_materials", CastedMaterials.DATA_NAMESPACE);
         assertEquals(ResourceLocation.fromNamespaceAndPath("create", "casing"),
-                CastedIds.CASING_ITEMS.location());
+                CastedMaterials.CASING_ITEMS.location());
         assertEquals(ResourceLocation.fromNamespaceAndPath("create", "casing"),
-                CastedIds.CASING_BLOCKS.location());
+                CastedMaterials.CASING_BLOCKS.location());
     }
 }

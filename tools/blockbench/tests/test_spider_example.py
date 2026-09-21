@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 from PIL import Image
 
@@ -10,6 +12,21 @@ from generate_spider_example import generate_example
 
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_generator_direct_script_runs_from_arbitrary_working_directory(tmp_path: Path) -> None:
+    script = TOOL_ROOT / "generate_spider_example.py"
+    loader = (
+        "import runpy, sys; "
+        "sys.path.insert(0, str(__import__('pathlib').Path(sys.argv[1]).parent)); "
+        "runpy.run_path(sys.argv[1], run_name='loaded_direct_script')"
+    )
+    result = subprocess.run(
+        [sys.executable, "-B", "-c", loader, str(script)],
+        cwd=tmp_path, capture_output=True, text=True,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_generates_self_contained_andesite_spider_blockbench_preview(tmp_path: Path) -> None:
@@ -51,3 +68,6 @@ def test_generates_self_contained_andesite_spider_blockbench_preview(tmp_path: P
     assert len(definition["regions"]) == 24
     assert definition["pixels"] == []
     assert definition["computed_cost"] == {"max_pieces_per_source_quad": 1, "additional_quads": 0}
+    repeated = generate_example(TOOL_ROOT, tmp_path / "repeat-examples", tmp_path / "repeat-build")
+    assert repeated.target_json.read_bytes() == outputs.target_json.read_bytes()
+    assert repeated.preview_png.read_bytes() == outputs.preview_png.read_bytes()

@@ -54,6 +54,22 @@ def test_validate_accepts_complete_integer_paired_faces(tmp_path: Path) -> None:
     assert main(["validate", str(path)]) == 0
 
 
+@pytest.mark.parametrize("axis", ["width", "height"])
+@pytest.mark.parametrize("value", [257, 512, 0, -1])
+def test_validate_reports_target_size_and_java_limit(
+        tmp_path: Path, capsys: pytest.CaptureFixture[str], axis: str, value: int) -> None:
+    data = initialized(tmp_path)
+    data["resolution"][axis] = value
+    path = tmp_path / "invalid-size.bbmodel"
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    assert main(["validate", str(path)]) == 2
+    error = capsys.readouterr().err
+    size = data["resolution"]
+    assert f"{size['width']}x{size['height']}" in error
+    assert "1" in error and "256" in error
+
+
 @pytest.mark.parametrize(
     ("mutation", "location", "message"),
     [

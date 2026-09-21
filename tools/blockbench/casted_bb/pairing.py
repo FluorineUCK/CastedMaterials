@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from tools.material_mapping.sampling import inverse_transform, validate_target_size
+
 from .model import BbModel, ElementFaceKey
 
 
@@ -42,8 +44,10 @@ def validate_model(model: BbModel) -> list[PairedFace]:
         raise ValidationError("CM_DEST", "<none>", "<none>", "empty mapping")
 
     target_width, target_height = model.resolution
-    if target_width <= 0 or target_height <= 0:
-        raise ValidationError("CM_DEST", "<none>", "<none>", "invalid target resolution")
+    try:
+        validate_target_size((target_width, target_height))
+    except ValueError as error:
+        raise ValidationError("CM_DEST", "<none>", "<none>", str(error)) from error
 
     occupied: dict[tuple[int, int], tuple[str, int, int, ElementFaceKey]] = {}
     pairs: list[PairedFace] = []
@@ -78,7 +82,7 @@ def validate_model(model: BbModel) -> list[PairedFace]:
             sx, sy, sw, sh = _rect(source_uv)
             for local_y in range(dh):
                 for local_x in range(dw):
-                    source_local_x, source_local_y = _inverse_transform(
+                    source_local_x, source_local_y = inverse_transform(
                         transform, local_x, local_y, sw, sh)
                     pixel = dx + local_x, dy + local_y
                     signature = slot, sx + source_local_x, sy + source_local_y
@@ -169,23 +173,6 @@ def _dimensions(uv: tuple[int, int, int, int]) -> tuple[int, int]:
 def _rect(uv: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
     x1, y1, x2, y2 = uv
     return min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)
-
-
-def _inverse_transform(
-        transform: str, x: int, y: int, source_width: int, source_height: int) -> tuple[int, int]:
-    if transform == "identity":
-        return x, y
-    if transform == "rotate_90":
-        return y, source_height - 1 - x
-    if transform == "rotate_180":
-        return source_width - 1 - x, source_height - 1 - y
-    if transform == "rotate_270":
-        return source_width - 1 - y, x
-    if transform == "mirror_x":
-        return source_width - 1 - x, y
-    if transform == "mirror_y":
-        return x, source_height - 1 - y
-    raise ValueError(f"unknown mapping transform {transform}")
 
 
 def _is_integer(value: Any) -> bool:

@@ -43,7 +43,7 @@ python tools/blockbench/cli.py init `
 
 - `CM_DEST`：Face UV 表示目标贴图坐标；
 - `CM_SOURCE[slot]`：同名元素、同方向 Face 的 UV 表示材质源坐标；
-- `CM_FIXED`：不随材质变化的 Face；
+- `CM_FIXED`：编辑器内保留的原始 Face；`init` 会克隆这些 Face 并保留原纹理引用；
 - 元素几何坐标不参与映射，源副本可在三维视图中移动。
 
 验证工程：
@@ -63,3 +63,11 @@ python tools/blockbench/cli.py export tools/blockbench/examples/model_paired.bbm
 ```
 
 导出使用整数像素和最近邻采样，将连续映射压缩为矩形，仅将孤立修正写入 `pixels`。验证、预览往返比较全部成功后才会原子替换目标 JSON。
+
+`CM_FIXED` 只保证配对工程和生成的 Blockbench 预览中仍能看到原始艺术：预览仅把 `CM_DEST`
+的纹理引用改到生成贴图，并让 `CM_FIXED` 保持可见及原引用。`export` 只展开配对 Face，**不会**把
+`CM_FIXED` 自动烘焙为目标 JSON/PNG 的运行时 overlay。需要固定运行时图层时，应另行制作透明 PNG，
+并在 target 定义中显式配置 `overlay` 或有序 texture layer。
+
+通用自动推断入口是 `python -B -m tools.material_mapping infer`，与 Blockbench 无关；本目录保留的
+`init` / `validate` / `export` 是旧配对工程入口，并单向复用 `tools.material_mapping` 中的共享算法。

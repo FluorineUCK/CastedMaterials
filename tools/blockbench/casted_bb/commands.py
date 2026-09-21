@@ -3,18 +3,31 @@ from __future__ import annotations
 import argparse
 import base64
 import copy
-import io
 import json
 import sys
-import tempfile
 import uuid
 from pathlib import Path
 from typing import Any, Sequence
 
+from tools.material_mapping.cli_support import (
+    _computed_cost,
+    _json,
+    _parse_grids,
+    _parse_size,
+    _parse_sources,
+    _png_bytes,
+    _publish_outputs,
+)
+from tools.material_mapping.compression import compress_pixels
+from tools.material_mapping.sampling import (
+    render_definition,
+    render_pixels,
+    validate_rgba_equal,
+)
+
 from .model import BbModel
-from .compression import compress_pixels
 from .pairing import ValidationError, validate_model
-from .preview import expand_pairs, render_definition, render_pixels
+from .preview import expand_pairs
 
 
 UUID_NAMESPACE = uuid.UUID("31e8cf5c-9b0a-4ee7-9f38-d808c1a01b67")
@@ -77,7 +90,7 @@ def _export(args: argparse.Namespace) -> None:
     if unknown:
         raise ValueError("undeclared --source slots: " + ", ".join(unknown))
 
-    from PIL import Image, ImageChops
+    from PIL import Image
 
     sources = {
         slot: Image.open(source_paths[slot]).convert("RGBA")
@@ -95,8 +108,7 @@ def _export(args: argparse.Namespace) -> None:
     }
     direct = render_pixels(mapped, model.resolution, sources, grids)
     round_trip = render_definition(definition, sources)
-    if ImageChops.difference(direct, round_trip).getbbox() is not None:
-        raise ValueError("preview round-trip differs from paired UV source")
+    validate_rgba_equal(direct, round_trip)
 
     target_bytes = _json(definition).encode("utf-8")
     preview_bytes = _png_bytes(direct)
@@ -112,7 +124,7 @@ def _export(args: argparse.Namespace) -> None:
 
 def _init(args: argparse.Namespace) -> None:
     source = BbModel.load(args.model).data
-    target_width, target_height = _parse_size(args.size)
+    target_width, target_height = _parse_size(args.size, target=True)
     slots = [slot.strip() for slot in args.slots.split(",") if slot.strip()]
     if not slots or len(slots) != len(set(slots)):
         raise ValueError("--slots must contain unique, non-empty names")
@@ -182,30 +194,6 @@ def _init(args: argparse.Namespace) -> None:
     args.output.write_text(_json(output), encoding="utf-8")
 
 
-def _parse_sources(values: list[str]) -> dict[str, Path]:
-    result: dict[str, Path] = {}
-    for value in values:
-        if "=" not in value:
-            raise ValueError("--source must be SLOT=PNG")
-        slot, path = value.split("=", 1)
-        if not slot or not path or slot in result:
-            raise ValueError("--source must use each non-empty slot once")
-        result[slot] = Path(path)
-    return result
-
-
-def _parse_grids(values: list[str], slots: list[str]) -> dict[str, tuple[int, int]]:
-    result: dict[str, tuple[int, int]] = {}
-    for value in values:
-        if "=" not in value:
-            raise ValueError("--source-grid must be SLOT=WIDTHxHEIGHT")
-        slot, size = value.split("=", 1)
-        if slot not in slots or slot in result:
-            raise ValueError("--source-grid must name each declared slot at most once")
-        result[slot] = _parse_size(size)
-    return result
-
-
 def _source_faces(
         faces: dict[str, dict[str, Any]], grid: tuple[int, int], slot: str) -> dict[str, dict[str, Any]]:
     result: dict[str, dict[str, Any]] = {}
@@ -226,13 +214,6 @@ def _source_faces(
         ]
         result[direction] = copied
     return result
-
-
-def _computed_cost(regions: list[dict], pixels: list[dict]) -> dict[str, int]:
-    return {
-        "max_pieces_per_source_quad": 1 if regions or pixels else 0,
-        "additional_quads": 0,
-    }
 
 
 def _preview_project(model: BbModel, texture_name: str, png: bytes) -> dict[str, Any]:
@@ -268,12 +249,6 @@ def _preview_project(model: BbModel, texture_name: str, png: bytes) -> dict[str,
     return project
 
 
-def _png_bytes(image) -> bytes:
-    output = io.BytesIO()
-    image.save(output, format="PNG", optimize=False)
-    return output.getvalue()
-
-
 def _child_uuids(children: list[Any]) -> list[str]:
     result: list[str] = []
     for child in children:
@@ -282,24 +257,6 @@ def _child_uuids(children: list[Any]) -> list[str]:
         elif isinstance(child, dict):
             result.extend(_child_uuids(child.get("children", [])))
     return result
-
-
-def _publish_outputs(outputs: list[tuple[Path, bytes]]) -> None:
-    for path, _ in outputs:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    staged: list[tuple[Path, Path]] = []
-    try:
-        for path, content in outputs:
-            with tempfile.NamedTemporaryFile(
-                    mode="wb", prefix=path.name + ".", suffix=".tmp",
-                    dir=path.parent, delete=False) as stream:
-                stream.write(content)
-                staged.append((Path(stream.name), path))
-        for temporary, path in staged:
-            temporary.replace(path)
-    finally:
-        for temporary, _ in staged:
-            temporary.unlink(missing_ok=True)
 
 
 def _copy_element(
@@ -358,19 +315,5 @@ def _texture_index(value: Any, textures: list[dict[str, Any]]) -> int | None:
     return None
 
 
-def _parse_size(value: str) -> tuple[int, int]:
-    parts = value.lower().split("x", 1)
-    if len(parts) != 2:
-        raise ValueError("--size must be WIDTHxHEIGHT")
-    width, height = int(parts[0]), int(parts[1])
-    if width <= 0 or height <= 0:
-        raise ValueError("--size must be positive")
-    return width, height
-
-
 def _uuid(key: str) -> str:
     return str(uuid.uuid5(UUID_NAMESPACE, key))
-
-
-def _json(data: dict[str, Any]) -> str:
-    return json.dumps(data, ensure_ascii=False, indent=2, separators=(",", ": ")) + "\n"

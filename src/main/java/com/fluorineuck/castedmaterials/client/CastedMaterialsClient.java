@@ -1,23 +1,31 @@
 package com.fluorineuck.castedmaterials.client;
 
-import com.fluorineuck.castedmaterials.client.failure.RenderableState;
-import com.fluorineuck.castedmaterials.client.render.CastedTextureHandle;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.model.geom.ModelPart;
 
-import java.util.Objects;
 
 public final class CastedMaterialsClient {
-    private static volatile ClientRuntime runtime = ClientRuntime.fallbackOnly();
+    private static volatile DefaultModelRuntime modelRuntime;
     private CastedMaterialsClient() {}
-    public static CastedTextureHandle resolve(ResourceLocation targetId, ResourceLocation materialId,
-                                               ResourceLocation fallbackTexture) {
-        try { return runtime.resolve(targetId, materialId, fallbackTexture); }
-        catch (RuntimeException ignored) { return CastedTextureHandle.fallback(fallbackTexture, RenderableState.QUARANTINED, 0); }
+    static void onResourceReload() {
+        DefaultModelRuntime current = modelRuntime;
+        if (current != null) current.clear();
     }
-    static void install(ClientRuntime next) {
-        next = Objects.requireNonNull(next, "runtime");
-        if (runtime != next) {
-            runtime = next;
+    /** Host rendering entry: Cached skins, direct UV source bindings, or the original base model. */
+    public static CastedModelHandle resolveModel(ModelPart root, ResourceLocation targetId,
+                                                  ResourceLocation materialId, ResourceLocation fallbackTexture) {
+        if (materialId == null) return CastedModelHandle.fallback(root, fallbackTexture);
+        try {
+            DefaultModelRuntime current = modelRuntime;
+            if (current == null) {
+                synchronized (CastedMaterialsClient.class) {
+                    if (modelRuntime == null) modelRuntime = DefaultModelRuntime.create();
+                    current = modelRuntime;
+                }
+            }
+            return current.resolve(root, targetId, materialId, fallbackTexture);
+        } catch (RuntimeException error) {
+            return CastedModelHandle.fallback(root, fallbackTexture);
         }
     }
 }

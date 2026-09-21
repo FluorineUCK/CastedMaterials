@@ -11,14 +11,21 @@ description = '''${mod_description}'''
 
 [[dependencies.${mod_id}]]
 modId = "minecraft"
-mandatory = true
+type = "required"
 versionRange = "[${minecraft_version}]"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.${mod_id}]]
 modId = "neoforge"
-mandatory = true
+type = "required"
 versionRange = "[${neo_version},)"
 ordering = "NONE"
 side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "create"
+type = "optional"
+versionRange = "${create_version_range}"
+ordering = "AFTER"
+side = "CLIENT"

@@ -52,17 +52,38 @@ neoForge {
 
 repositories {
     mavenCentral()
+    maven { url = 'https://maven.createmod.net' }
+}
+
+sourceSets {
+    createCompatTest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+configurations {
+    createCompatTestImplementation.extendsFrom testImplementation
+    createCompatTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 dependencies {
+    compileOnly("com.simibubi.create:create-${minecraft_version}:${create_version}") { transitive = false }
+    compileOnly("net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}") { transitive = false }
+    createCompatTestImplementation("com.simibubi.create:create-${minecraft_version}:${create_version}") { transitive = false }
+    createCompatTestImplementation("net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}") { transitive = false }
     testImplementation platform('org.junit:junit-bom:5.10.3')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
-sourceSets.test.runtimeClasspath += sourceSets.main.compileClasspath
+sourceSets.test.resources.srcDir('tools/test-resources')
 sourceSets.test.resources.srcDir('tools/blockbench/test-resources')
+
+processTestResources {
+    // Shared fixtures are authoritative; the paired tool retains identical copies.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
 
 processResources {
     def replaceProperties = [
@@ -74,6 +95,7 @@ processResources {
             mod_version      : mod_version,
             mod_authors      : mod_authors,
             mod_license      : mod_license,
+            create_version_range: create_version_range,
             mod_description  : mod_description
     ]
 
@@ -95,6 +117,14 @@ test {
 
 jar {
     exclude 'tools/**', 'examples/**', 'integration/**', '**/*.py', '**/*.bbmodel'
+    from(rootProject.file('LICENSE')) {
+        into 'META-INF'
+        rename { 'LICENSE_casted_materials.txt' }
+    }
+    from(rootProject.file('LICENSES/Nobodiiiii-MIT.txt')) {
+        into 'META-INF'
+        rename { 'LICENSE_Nobodiiiii.txt' }
+    }
     manifest {
         attributes([
                 'Specification-Title'   : mod_id,
@@ -114,3 +144,78 @@ publishing {
         }
     }
 }
+
+// ModDevGradle 2.0.141 configures NeoForge's bootstrap only for the default test
+// suite. Reuse its game/test libraries and launch files, not main compileClasspath
+// (which would leak optional Create into the normal runtime).
+sourceSets.createCompatTest.compileClasspath += sourceSets.test.compileClasspath
+sourceSets.createCompatTest.runtimeClasspath += sourceSets.test.runtimeClasspath
+
+tasks.register('verifyRuntimeIsolation') {
+    group = 'verification'
+    doLast {
+        def containsCreate = { files -> files.any { it.name.startsWith('create-1.21.1-') } }
+        def mainRuntime = sourceSets.main.runtimeClasspath.files
+        def testRuntime = sourceSets.test.runtimeClasspath.files
+        def compatRuntime = sourceSets.createCompatTest.runtimeClasspath.files
+        println "test.runtimeClasspath=${testRuntime*.absolutePath.join(File.pathSeparator)}"
+        println "createCompatTest.runtimeClasspath=${compatRuntime*.absolutePath.join(File.pathSeparator)}"
+        if (containsCreate(mainRuntime)) {
+            throw new GradleException('Create leaked into main runtime')
+        }
+        if (containsCreate(testRuntime)) {
+            throw new GradleException('Create leaked into default tests')
+        }
+        if (!containsCreate(compatRuntime)) {
+            throw new GradleException('Create compatibility tests require real Create')
+        }
+    }
+}
+
+sourcesJar {
+    from(rootProject.file('LICENSE')) {
+        into 'META-INF'
+        rename { 'LICENSE_casted_materials.txt' }
+    }
+    from(rootProject.file('LICENSES/Nobodiiiii-MIT.txt')) {
+        into 'META-INF'
+        rename { 'LICENSE_Nobodiiiii.txt' }
+    }
+}
+
+tasks.register('verifyStandaloneJar', Exec) {
+    group = 'verification'
+    description = 'Rejects host classes, bundled dependencies, fixtures, and incomplete standalone metadata.'
+    dependsOn tasks.named('jar')
+    inputs.file(layout.projectDirectory.file('scripts/verify_standalone.py'))
+    inputs.file(tasks.named('jar').flatMap { it.archiveFile })
+    doFirst {
+        commandLine 'python', '-B',
+                layout.projectDirectory.file('scripts/verify_standalone.py').asFile.absolutePath,
+                tasks.named('jar').get().archiveFile.get().asFile.absolutePath
+    }
+}
+
+tasks.register('createCompatTest', Test) {
+    group = 'verification'
+    description = 'Tests the optional bridge against the real Create casing registry.'
+    testClassesDirs = sourceSets.createCompatTest.output.classesDirs
+    classpath = sourceSets.createCompatTest.runtimeClasspath
+    useJUnitPlatform()
+    dependsOn tasks.named('prepareNeoForgeTestFiles'), tasks.named('verifyRuntimeIsolation')
+    mustRunAfter tasks.named('test')
+    systemProperty 'castedMaterials.projectDir', projectDir.absolutePath
+    systemProperty 'fml.junit.argsfile', layout.buildDirectory.file('moddev/junit/programArgs.txt').get().asFile.absolutePath
+    jvmArgs "@${layout.buildDirectory.file('moddev/junit/vmArgs.txt').get().asFile.absolutePath}"
+    workingDir layout.buildDirectory.dir('minecraft-junit').get().asFile
+    // Same fml.modFolders protocol used by ModDevGradle's RunUtils, including
+    // this suite's output in the tested mod instead of creating a second mod.
+    jvmArgumentProviders.add({
+        def outputs = sourceSets.main.output + sourceSets.test.output + sourceSets.createCompatTest.output
+        ["-Dfml.modFolders=${outputs.files.collect { "${mod_id}%%${it.absolutePath}" }.join(File.pathSeparator)}"]
+    } as CommandLineArgumentProvider)
+}
+
+test.dependsOn tasks.named('verifyRuntimeIsolation')
+check.dependsOn tasks.named('createCompatTest')
+check.dependsOn tasks.named('verifyStandaloneJar')
